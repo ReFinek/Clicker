@@ -3,637 +3,447 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ Кликер Империя</title>
+<title>Memory Game</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'Nunito', sans-serif;
+  html, body {
+    height: 100%;
+    overflow-x: hidden; /* Запрет горизонтального скролла */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-    min-height: 100vh;
     color: #fff;
-    overflow-x: hidden;
+    padding: 15px;
   }
 
-  /* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
-  .top-bar {
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    padding: 15px 30px;
+  .wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    gap: 25px;
+    max-width: 1150px;
+    width: 100%;
+    margin: 0 auto;
+    align-items: flex-start;
   }
 
-  .score-display {
-    text-align: center;
+  /* Левая часть: игра */
+  .game-section {
+    flex: 1;
+    min-width: 0; /* Важно для flex, чтобы не вылезал */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Смещение влево */
   }
 
-  .score-display .label {
-    font-size: 14px;
-    color: rgba(255,255,255,0.6);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
-
-  .score-display .value {
-    font-size: 42px;
-    font-weight: 900;
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 12px;
     background: linear-gradient(90deg, #f9d423, #ff4e50);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: none;
   }
 
   .stats {
     display: flex;
     gap: 20px;
-    font-size: 14px;
-    color: rgba(255,255,255,0.7);
+    margin-bottom: 15px;
+    font-size: 1rem;
+    flex-wrap: wrap;
   }
 
   .stats span {
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.1);
     padding: 6px 14px;
     border-radius: 20px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.15);
   }
 
-  /* ===== ОСНОВНОЙ КОНТЕНТ ===== */
-  .main {
-    display: flex;
-    gap: 30px;
-    padding: 30px 30px 30px 30px;
-    max-width: 1400px;
-    margin: 0 auto;
+  .stats span b { color: #f9d423; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 6px;
+    width: 100%;
+    max-width: 760px; /* Фиксирует ширину, чтобы не было скролла */
+    perspective: 1000px;
   }
 
-  /* ===== ЗОНА КЛИКА ===== */
-  .click-zone {
-    flex: 1;
+  .card {
+    aspect-ratio: 1;
+    cursor: pointer;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+    border-radius: 10px;
+    touch-action: manipulation;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+  .card.matched {
+    transform: rotateY(180deg);
+    pointer-events: none;
+    animation: matchPop 0.5s ease;
+  }
+
+  .card.matched .card-front {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    box-shadow: 0 0 12px rgba(56, 239, 125, 0.4);
+    border-color: rgba(255,255,255,0.4);
+  }
+
+  .card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 10px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 70vh;
+    font-size: clamp(1.2rem, 2.5vw, 2rem);
   }
 
-  .click-btn {
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    background: radial-gradient(circle at 35% 35%, #ff6b6b, #c0392b);
-    box-shadow:
-      0 8px 30px rgba(231, 76, 60, 0.4),
-      0 0 60px rgba(231, 76, 60, 0.15),
-      inset 0 -4px 12px rgba(0,0,0,0.3),
-      inset 0 4px 12px rgba(255,255,255,0.2);
-    transition: transform 0.1s, box-shadow 0.1s;
-    position: relative;
-    outline: none;
+  .card-back {
+    background: linear-gradient(145deg, #3a3a6e, #2a2a5e);
+    border: 2px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+
+  .card-back::after {
+    content: '?';
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.25);
+    font-weight: bold;
+  }
+
+  .card:not(.flipped):not(.matched):hover .card-back {
+    border-color: rgba(249, 212, 35, 0.4);
+    box-shadow: 0 4px 15px rgba(249, 212, 35, 0.15);
+  }
+
+  .card-front {
+    background: linear-gradient(145deg, #4a4a8a, #3a3a7a);
+    border: 2px solid rgba(255,255,255,0.2);
+    transform: rotateY(180deg);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     user-select: none;
-    -webkit-user-select: none;
   }
 
-  .click-btn::after {
-    content: '⚡';
-    font-size: 70px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-
-  .click-btn:hover {
-    transform: scale(1.05);
-    box-shadow:
-      0 12px 40px rgba(231, 76, 60, 0.6),
-      0 0 80px rgba(231, 76, 60, 0.25),
-      inset 0 -4px 12px rgba(0,0,0,0.3),
-      inset 0 4px 12px rgba(255,255,255,0.2);
-  }
-
-  .click-btn:active {
-    transform: scale(0.93);
-    box-shadow:
-      0 4px 15px rgba(231, 76, 60, 0.3),
-      inset 0 -2px 8px rgba(0,0,0,0.3);
-  }
-
-  .click-info {
-    margin-top: 25px;
-    font-size: 18px;
-    color: rgba(255,255,255,0.5);
-  }
-
-  .click-info strong {
-    color: #f9d423;
-  }
-
-  /* ===== Всплывающие числа ===== */
-  .float-text {
-    position: fixed;
-    pointer-events: none;
-    font-weight: 900;
-    font-size: 28px;
-    color: #f9d423;
-    text-shadow: 0 0 10px rgba(249,212,35,0.5);
-    animation: floatUp 1s ease-out forwards;
-    z-index: 999;
-  }
-
-  @keyframes floatUp {
-    0%   { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
-  }
-
-  /* ===== МАГАЗИН ===== */
-  .shop {
-    width: 420px;
+  /* Правая часть: рекорды и кнопка */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-height: 85vh;
-    overflow-y: auto;
-    padding-right: 0;
-    margin-right: 0;
+    gap: 15px;
+    height: fit-content;
   }
 
-  .shop::-webkit-scrollbar { width: 6px; }
-  .shop::-webkit-scrollbar-track { background: transparent; }
-  .shop::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-
-  .shop-title {
-    font-size: 22px;
-    font-weight: 900;
+  .sidebar h2 {
+    font-size: 1.2rem;
+    text-align: center;
     margin-bottom: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 8px;
+  }
+
+  #leaderboard {
+    list-style: none;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
   }
 
-  .upgrade-card {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
-    padding: 16px 20px;
+  #leaderboard li {
     display: flex;
-    align-items: center;
-    gap: 15px;
-    transition: all 0.2s;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.05);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+
+  #leaderboard li:nth-child(1) { border-left: 3px solid #ffd700; }
+  #leaderboard li:nth-child(2) { border-left: 3px solid #c0c0c0; }
+  #leaderboard li:nth-child(3) { border-left: 3px solid #cd7f32; }
+
+  #leaderboard .empty {
+    color: #888;
+    font-style: italic;
+    justify-content: center;
+  }
+
+  .btn-restart {
+    margin-top: auto;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #f9d423, #ff4e50);
+    color: #fff;
     cursor: pointer;
-    user-select: none;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(255, 78, 80, 0.3);
   }
 
-  .upgrade-card:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.2);
-    transform: translateX(-4px);
+  .btn-restart:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 20px rgba(255, 78, 80, 0.5);
   }
 
-  .upgrade-card.cant-afford {
-    opacity: 0.4;
-    cursor: not-allowed;
+  .btn-restart:active { transform: scale(0.98); }
+
+  /* Анимации */
+  @keyframes matchPop {
+    0% { transform: rotateY(180deg) scale(1); }
+    50% { transform: rotateY(180deg) scale(1.1); }
+    100% { transform: rotateY(180deg) scale(1); }
   }
 
-  .upgrade-card.cant-afford:hover {
-    transform: none;
-    background: rgba(255,255,255,0.06);
+  @keyframes noMatch {
+    0%, 100% { transform: rotateY(180deg) translateX(0); }
+    25% { transform: rotateY(180deg) translateX(-5px); }
+    75% { transform: rotateY(180deg) translateX(5px); }
   }
 
-  .upgrade-icon {
-    font-size: 36px;
-    width: 55px;
-    height: 55px;
-    display: flex;
+  .card.no-match-anim { animation: noMatch 0.4s ease; }
+
+  /* Оверлей победы */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 12, 41, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 100;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.08);
-    border-radius: 12px;
-    flex-shrink: 0;
+    flex-direction: column;
+    text-align: center;
   }
 
-  .upgrade-info { flex: 1; min-width: 0; }
+  .overlay.show { display: flex; animation: fadeIn 0.4s ease; }
 
-  .upgrade-info .name {
-    font-weight: 700;
-    font-size: 16px;
-    margin-bottom: 2px;
+  .overlay h2 {
+    font-size: 2.5rem;
+    background: linear-gradient(90deg, #f9d423, #ff4e50);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
   }
 
-  .upgrade-info .desc {
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-  }
+  .overlay p { font-size: 1.2rem; margin-bottom: 25px; color: rgba(255,255,255,0.85); }
 
-  .upgrade-info .owned {
-    font-size: 11px;
-    color: rgba(255,255,255,0.3);
-    margin-top: 3px;
-  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-  .upgrade-price {
-    background: linear-gradient(135deg, #f9d423, #f5a623);
-    color: #1a1a2e;
-    font-weight: 900;
-    font-size: 14px;
-    padding: 8px 16px;
-    border-radius: 25px;
-    white-space: nowrap;
-  }
-
-  /* ===== ДОСТИЖЕНИЯ ===== */
-  .achievement-popup {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    padding: 14px 28px;
-    border-radius: 16px;
-    font-weight: 700;
-    font-size: 16px;
-    box-shadow: 0 10px 40px rgba(102,126,234,0.4);
-    animation: slideIn 0.5s ease forwards, slideOut 0.5s ease 2.5s forwards;
-    z-index: 1000;
-    white-space: nowrap;
-  }
-
-  @keyframes slideIn {
-    to { transform: translateX(-50%) translateY(0); }
-  }
-  @keyframes slideOut {
-    to { transform: translateX(-50%) translateY(100px); opacity: 0; }
-  }
-
-  /* ===== ЧАСТИЦЫ ===== */
-  .particle {
-    position: fixed;
-    pointer-events: none;
-    border-radius: 50%;
-    animation: particleFade 0.8s ease-out forwards;
-    z-index: 998;
-  }
-
-  @keyframes particleFade {
-    0%   { opacity: 1; transform: scale(1); }
-    100% { opacity: 0; transform: scale(0); }
-  }
-
-  /* ===== АДАПТИВ ===== */
-  @media (max-width: 768px) {
-    .main {
-      flex-direction: column;
-      padding: 15px;
-    }
-    .shop {
-      width: 100%;
-      max-height: none;
-    }
-    .click-btn {
-      width: 160px;
-      height: 160px;
-    }
-    .score-display .value {
-      font-size: 30px;
-    }
+  /* Адаптив */
+  @media (max-width: 850px) {
+    .wrapper { flex-direction: column; align-items: center; }
+    .game-section { align-items: center; }
+    .sidebar { width: 100%; max-width: 760px; flex-direction: row; align-items: center; justify-content: space-between; }
+    .sidebar h2 { margin: 0; border: none; padding: 0; }
+    #leaderboard { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+    #leaderboard li { padding: 4px 8px; font-size: 0.85rem; }
+    .btn-restart { margin: 0; }
+    h1 { text-align: center; }
+    .stats { justify-content: center; }
   }
 </style>
 </head>
 <body>
 
-<!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-<div class="top-bar">
-  <div class="stats">
-    <span>⚡ За клик: <strong id="perClick">1</strong></span>
-    <span>🔄 В секунду: <strong id="perSec">0</strong></span>
-  </div>
-  <div class="score-display">
-    <div class="label">Очки</div>
-    <div class="value" id="score">0</div>
-  </div>
-  <div class="stats">
-    <span>🖱 Всего кликов: <strong id="totalClicks">0</strong></span>
-    <span>🏆 Всего очков: <strong id="totalScore">0</strong></span>
-  </div>
+<div class="wrapper">
+  <main class="game-section">
+    <h1>🧠 Memory Game</h1>
+    <div class="stats">
+      <span>Ходы: <b id="moves">0</b></span>
+      <span>Пары: <b id="pairs">0</b> / 28</span>
+      <span>Время: <b id="timer">0:00</b></span>
+    </div>
+    <div class="board" id="board"></div>
+  </main>
+
+  <aside class="sidebar">
+    <h2>🏆 Рекорды</h2>
+    <ol id="leaderboard"><li class="empty">Пока нет рекордов</li></ol>
+    <button class="btn-restart" onclick="initGame()">🔄 Новая игра</button>
+  </aside>
 </div>
 
-<!-- ОСНОВНОЙ КОНТЕНТ -->
-<div class="main">
-
-  <!-- ЗОНА КЛИКА -->
-  <div class="click-zone">
-    <button class="click-btn" id="clickBtn"></button>
-    <div class="click-info">Кликай по кнопке, чтобы зарабатывать <strong>очки</strong>!</div>
-  </div>
-
-  <!-- МАГАЗИН -->
-  <div class="shop" id="shop">
-    <div class="shop-title">🛒 Магазин улучшений</div>
-  </div>
-
+<div class="overlay" id="overlay">
+  <h2>🎉 Победа!</h2>
+  <p id="winText">Вы нашли все пары!</p>
+  <button class="btn-restart" onclick="closeOverlay(); initGame();">Играть снова</button>
 </div>
 
 <script>
-// ==================== ИГРОВЫЕ ДАННЫЕ ====================
-let score = 0;
-let totalScore = 0;
-let totalClicks = 0;
-let perClick = 1;
-let perSec = 0;
-let isClicking = false;
+  const emojis = [
+    '🍎','🍊','🍋','🍇','🍉','🍓','🫐','🍒',
+    '🥝','🍑','🥭','🍍','🥥','🌶️','🍕','🍔',
+    '🌮','🍣','🍩','🧁','🎸','🎨','🚀','⚡',
+    '🌈','🎯','🦄','🐉'
+  ];
 
-// ==================== УЛУЧШЕНИЯ (до триллионов) ====================
-const upgrades = [
-  { id: 'cursor', icon: '👆', name: 'Усиленный курсор', desc: '+1 к клику', basePrice: 15, priceMult: 1.5, owned: 0, type: 'click', value: 1 },
-  { id: 'auto1', icon: '🤖', name: 'Авто-кликер', desc: '+1 очко/сек', basePrice: 50, priceMult: 1.4, owned: 0, type: 'auto', value: 1 },
-  { id: 'double', icon: '✌️', name: 'Двойной удар', desc: '+3 к клику', basePrice: 120, priceMult: 1.55, owned: 0, type: 'click', value: 3 },
-  { id: 'auto2', icon: '⚙️', name: 'Фабрика кликов', desc: '+5 очков/сек', basePrice: 300, priceMult: 1.5, owned: 0, type: 'auto', value: 5 },
-  { id: 'mega', icon: '💎', name: 'Мега-палец', desc: '+10 к клику', basePrice: 800, priceMult: 1.6, owned: 0, type: 'click', value: 10 },
-  { id: 'auto3', icon: '🏭', name: 'Империя кликов', desc: '+20 очков/сек', basePrice: 2000, priceMult: 1.55, owned: 0, type: 'auto', value: 20 },
-  { id: 'ultra', icon: '🔮', name: 'Квантовый тап', desc: '+50 к клику', basePrice: 5000, priceMult: 1.65, owned: 0, type: 'click', value: 50 },
-  { id: 'auto4', icon: '🚀', name: 'Клик-ракета', desc: '+100 очков/сек', basePrice: 15000, priceMult: 1.6, owned: 0, type: 'auto', value: 100 },
-  { id: 'super', icon: '⭐', name: 'Супер-клик', desc: '+250 к клику', basePrice: 50000, priceMult: 1.65, owned: 0, type: 'click', value: 250 },
-  { id: 'auto5', icon: '🌟', name: 'Звёздная фабрика', desc: '+500 очков/сек', basePrice: 100000, priceMult: 1.65, owned: 0, type: 'auto', value: 500 },
-  { id: 'cosmic', icon: '🌌', name: 'Космический палец', desc: '+1,000 к клику', basePrice: 250000, priceMult: 1.7, owned: 0, type: 'click', value: 1000 },
-  { id: 'auto6', icon: '🛰️', name: 'Орбитальная станция', desc: '+2,500 очков/сек', basePrice: 750000, priceMult: 1.7, owned: 0, type: 'auto', value: 2500 },
-  { id: 'galaxy', icon: '🌠', name: 'Галактический клик', desc: '+5,000 к клику', basePrice: 2000000, priceMult: 1.75, owned: 0, type: 'click', value: 5000 },
-  { id: 'auto7', icon: '🌌', name: 'Галактика кликов', desc: '+10,000 очков/сек', basePrice: 5000000, priceMult: 1.75, owned: 0, type: 'auto', value: 10000 },
-  { id: 'universe', icon: '🌠', name: 'Вселенский тап', desc: '+25,000 к клику', basePrice: 15000000, priceMult: 1.8, owned: 0, type: 'click', value: 25000 },
-  { id: 'auto8', icon: '🌌', name: 'Вселенная кликов', desc: '+50,000 очков/сек', basePrice: 40000000, priceMult: 1.8, owned: 0, type: 'auto', value: 50000 },
-  { id: 'multiverse', icon: '✨', name: 'Мультивселенная', desc: '+100,000 к клику', basePrice: 120000000, priceMult: 1.85, owned: 0, type: 'click', value: 100000 },
-  { id: 'auto9', icon: '🌠', name: 'Космическая империя', desc: '+250,000 очков/сек', basePrice: 350000000, priceMult: 1.85, owned: 0, type: 'auto', value: 250000 },
-  { id: 'dimension', icon: '💫', name: 'Измерение кликов', desc: '+500,000 к клику', basePrice: 1000000000, priceMult: 1.9, owned: 0, type: 'click', value: 500000 },
-  { id: 'auto10', icon: '🌌', name: 'Квантовая реальность', desc: '+1M очков/сек', basePrice: 3000000000, priceMult: 1.9, owned: 0, type: 'auto', value: 1000000 },
-  { id: 'infinity', icon: '♾️', name: 'Бесконечный клик', desc: '+5M к клику', basePrice: 10000000000, priceMult: 1.95, owned: 0, type: 'click', value: 5000000 },
-  { id: 'auto11', icon: '🌟', name: 'Бесконечность+', desc: '+10M очков/сек', basePrice: 30000000000, priceMult: 1.95, owned: 0, type: 'auto', value: 10000000 },
-  { id: 'eternity', icon: '⏳', name: 'Вечность', desc: '+50M к клику', basePrice: 100000000000, priceMult: 2.0, owned: 0, type: 'click', value: 50000000 },
-  { id: 'auto12', icon: '💎', name: 'Алмазная эра', desc: '+100M очков/сек', basePrice: 300000000000, priceMult: 2.0, owned: 0, type: 'auto', value: 100000000 },
-  { id: 'omnipotent', icon: '👁️', name: 'Всемогущий клик', desc: '+500M к клику', basePrice: 1000000000000, priceMult: 2.1, owned: 0, type: 'click', value: 500000000 },
-  { id: 'auto13', icon: '🌌', name: 'Триллионная империя', desc: '+1B очков/сек', basePrice: 3000000000000, priceMult: 2.1, owned: 0, type: 'auto', value: 1000000000 },
-];
+  let cards = [];
+  let flippedCards = [];
+  let matchedPairs = 0;
+  let moves = 0;
+  let lockBoard = false;
+  let timerInterval = null;
+  let seconds = 0;
+  let gameStarted = false;
 
-// ==================== ДОСТИЖЕНИЯ (расширенные) ====================
-const achievements = [
-  { score: 100, text: '🎉 100 очков! Новичок кликер' },
-  { score: 500, text: '🔥 500 очков! Первый успех' },
-  { score: 1000, text: '⚡ 1K очков! Клик-мастер' },
-  { score: 5000, text: '💪 5K очков! Продвинутый кликер' },
-  { score: 10000, text: ' 10K очков! Клик-маньяк' },
-  { score: 25000, text: '🌟 25K очков! Эксперт кликов' },
-  { score: 50000, text: '💰 50K очков! Клик-магнат' },
-  { score: 100000, text: '👑 100K очков! Клик-легенда' },
-  { score: 250000, text: '💎 250K очков! Алмазный кликер' },
-  { score: 500000, text: '🌠 500K очков! Клик-божество' },
-  { score: 1000000, text: '🏅 1M очков! МИЛЛИОНЕР!' },
-  { score: 5000000, text: '⭐ 5M очков! Мульти-миллионер' },
-  { score: 10000000, text: '🌟 10M очков! Клик-олигарх' },
-  { score: 50000000, text: '💫 50M очков! Галактический магнат' },
-  { score: 100000000, text: '🌌 100M очков! Вселенский кликер' },
-  { score: 500000000, text: '✨ 500M очков! Космический властелин' },
-  { score: 1000000000, text: '👁️ 1B очков! МИЛЛИАРДЕР!' },
-  { score: 5000000000, text: '♾️ 5B очков! Почти бесконечность' },
-  { score: 10000000000, text: '🌠 10B очков! Десять миллиардов!' },
-  { score: 50000000000, text: '💎 50B очков! Клик-титан' },
-  { score: 100000000000, text: '🏆 100B очков! Сотня миллиардов!' },
-  { score: 500000000000, text: '⭐ 500B очков! Полтриллиона!' },
-  { score: 1000000000000, text: '👑 1T очков! ТРИЛЛИОНЕР! Легенда!' },
-];
-let achieved = new Set();
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
 
-// ==================== DOM ЭЛЕМЕНТЫ ====================
-const scoreEl = document.getElementById('score');
-const perClickEl = document.getElementById('perClick');
-const perSecEl = document.getElementById('perSec');
-const totalClicksEl = document.getElementById('totalClicks');
-const totalScoreEl = document.getElementById('totalScore');
-const shopEl = document.getElementById('shop');
-const clickBtn = document.getElementById('clickBtn');
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
 
-// ==================== ФОРМАТИРОВАНИЕ ЧИСЕЛ ====================
-function formatNum(n) {
-  if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
-  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
-  if (n >= 1e4) return (n / 1e3).toFixed(1) + 'K';
-  return Math.floor(n).toLocaleString('ru');
-}
+  function startTimer() {
+    if (gameStarted) return;
+    gameStarted = true;
+    timerInterval = setInterval(() => {
+      seconds++;
+      document.getElementById('timer').textContent = formatTime(seconds);
+    }, 1000);
+  }
 
-// ==================== ЦЕНА УЛУЧШЕНИЯ ====================
-function getPrice(upg) {
-  return Math.floor(upg.basePrice * Math.pow(upg.priceMult, upg.owned));
-}
+  function stopTimer() { clearInterval(timerInterval); }
 
-// ==================== РЕНДЕР МАГАЗИНА ====================
-function renderShop() {
-  const title = shopEl.querySelector('.shop-title');
-  shopEl.innerHTML = '';
-  shopEl.appendChild(title);
+  // === Логика рекордов ===
+  function getRecords() {
+    try {
+      return JSON.parse(localStorage.getItem('memoryRecords') || '[]');
+    } catch { return []; }
+  }
 
-  upgrades.forEach((upg, i) => {
-    const price = getPrice(upg);
-    const canAfford = score >= price;
+  function saveRecord(time) {
+    const records = getRecords();
+    records.push(time);
+    records.sort((a, b) => a - b);
+    const top = records.slice(0, 5); // Храним топ-5
+    try { localStorage.setItem('memoryRecords', JSON.stringify(top)); } catch {}
+  }
 
+  function renderLeaderboard() {
+    const list = document.getElementById('leaderboard');
+    const records = getRecords();
+    if (records.length === 0) {
+      list.innerHTML = '<li class="empty">Пока нет рекордов</li>';
+      return;
+    }
+    list.innerHTML = records.map((t, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+      return `<li><span>${medal}</span> <span>${formatTime(t)}</span></li>`;
+    }).join('');
+  }
+
+  // === Игровая логика ===
+  function createCard(emoji, index) {
     const card = document.createElement('div');
-    card.className = 'upgrade-card' + (canAfford ? '' : ' cant-afford');
-    card.innerHTML = `
-      <div class="upgrade-icon">${upg.icon}</div>
-      <div class="upgrade-info">
-        <div class="name">${upg.name}</div>
-        <div class="desc">${upg.desc}</div>
-        <div class="owned">Куплено: ${upg.owned}</div>
-      </div>
-      <div class="upgrade-price">💰 ${formatNum(price)}</div>
-    `;
-
-    if (canAfford) {
-      card.addEventListener('click', () => buyUpgrade(i));
-    }
-
-    shopEl.appendChild(card);
-  });
-}
-
-// ==================== ПОКУПКА УЛУЧШЕНИЯ ====================
-function buyUpgrade(index) {
-  const upg = upgrades[index];
-  const price = getPrice(upg);
-
-  if (score < price) return;
-
-  score -= price;
-  upg.owned++;
-
-  if (upg.type === 'click') {
-    perClick += upg.value;
-  } else {
-    perSec += upg.value;
+    card.classList.add('card');
+    card.dataset.emoji = emoji;
+    card.dataset.index = index;
+    card.innerHTML = `<div class="card-back"></div><div class="card-front">${emoji}</div>`;
+    card.addEventListener('click', () => flipCard(card));
+    return card;
   }
 
-  updateUI();
-  renderShop();
-  checkAchievements();
-  saveGame();
-}
+  function flipCard(card) {
+    if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched') || flippedCards.length >= 2) return;
 
-// ==================== ОБНОВЛЕНИЕ UI ====================
-function updateUI() {
-  scoreEl.textContent = formatNum(score);
-  perClickEl.textContent = formatNum(perClick);
-  perSecEl.textContent = formatNum(perSec);
-  totalClicksEl.textContent = formatNum(totalClicks);
-  totalScoreEl.textContent = formatNum(totalScore);
-}
+    startTimer();
+    card.classList.add('flipped');
+    flippedCards.push(card);
 
-// ==================== ОБРАБОТКА КЛИКА (исправлено) ====================
-function handleClick(e) {
-  if (isClicking) return;
-  isClicking = true;
-  
-  score += perClick;
-  totalScore += perClick;
-  totalClicks++;
-
-  // Получаем координаты клика или центра кнопки
-  const rect = clickBtn.getBoundingClientRect();
-  const x = e.clientX || (rect.left + rect.width / 2);
-  const y = e.clientY || (rect.top + rect.height / 2);
-
-  // Всплывающий текст
-  spawnFloatText(x, y, '+' + formatNum(perClick));
-
-  // Частицы
-  spawnParticles(x, y, 5);
-
-  updateUI();
-  renderShop();
-  checkAchievements();
-  
-  setTimeout(() => { isClicking = false; }, 50);
-}
-
-// Используем mousedown вместо click для надёжности
-clickBtn.addEventListener('mousedown', (e) => {
-  e.preventDefault();
-  handleClick(e);
-});
-
-clickBtn.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  handleClick({ clientX: touch.clientX, clientY: touch.clientY });
-});
-
-// ==================== ВСПЛЫВАЮЩИЙ ТЕКСТ ====================
-function spawnFloatText(x, y, text) {
-  const el = document.createElement('div');
-  el.className = 'float-text';
-  el.textContent = text;
-  el.style.left = (x - 30) + 'px';
-  el.style.top = (y - 20) + 'px';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1000);
-}
-
-// ==================== ЧАСТИЦЫ ====================
-function spawnParticles(x, y, count) {
-  const colors = ['#f9d423', '#ff4e50', '#764ba2', '#667eea', '#00d2ff'];
-  for (let i = 0; i < count; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    const size = Math.random() * 8 + 4;
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const offsetX = (Math.random() - 0.5) * 100;
-    const offsetY = (Math.random() - 0.5) * 100;
-
-    p.style.cssText = `
-      width: ${size}px; height: ${size}px;
-      background: ${color};
-      left: ${x + offsetX}px;
-      top: ${y + offsetY}px;
-    `;
-    document.body.appendChild(p);
-    setTimeout(() => p.remove(), 800);
+    if (flippedCards.length === 2) {
+      moves++;
+      document.getElementById('moves').textContent = moves;
+      checkMatch();
+    }
   }
-}
 
-// ==================== ДОСТИЖЕНИЯ ====================
-function checkAchievements() {
-  achievements.forEach(a => {
-    if (totalScore >= a.score && !achieved.has(a.score)) {
-      achieved.add(a.score);
-      showAchievement(a.text);
+  function checkMatch() {
+    const [a, b] = flippedCards;
+    const match = a.dataset.emoji === b.dataset.emoji;
+
+    if (match) {
+      a.classList.add('matched');
+      b.classList.add('matched');
+      matchedPairs++;
+      document.getElementById('pairs').textContent = matchedPairs;
+      flippedCards = [];
+
+      if (matchedPairs === 28) {
+        stopTimer();
+        saveRecord(seconds);
+        renderLeaderboard();
+        setTimeout(() => {
+          document.getElementById('winText').innerHTML = 
+            `Ваше время: <b>${formatTime(seconds)}</b><br>Ходов: ${moves}`;
+          document.getElementById('overlay').classList.add('show');
+        }, 600);
+      }
+    } else {
+      lockBoard = true;
+      setTimeout(() => {
+        a.classList.add('no-match-anim');
+        b.classList.add('no-match-anim');
+      }, 200);
+
+      setTimeout(() => {
+        a.classList.remove('flipped', 'no-match-anim');
+        b.classList.remove('flipped', 'no-match-anim');
+        flippedCards = [];
+        lockBoard = false;
+      }, 800);
     }
-  });
-}
-
-function showAchievement(text) {
-  const popup = document.createElement('div');
-  popup.className = 'achievement-popup';
-  popup.textContent = text;
-  document.body.appendChild(popup);
-  setTimeout(() => popup.remove(), 3200);
-}
-
-// ==================== АВТО-КЛИК ====================
-setInterval(() => {
-  if (perSec > 0) {
-    score += perSec;
-    totalScore += perSec;
-    updateUI();
-    renderShop();
-    checkAchievements();
   }
-}, 1000);
 
-setInterval(() => {
-  renderShop();
-}, 2000);
+  function closeOverlay() { document.getElementById('overlay').classList.remove('show'); }
 
-// ==================== СОХРАНЕНИЕ ====================
-function saveGame() {
-  const data = {
-    score, totalScore, totalClicks, perClick, perSec,
-    upgrades: upgrades.map(u => u.owned),
-    achieved: [...achieved]
-  };
-  localStorage.setItem('clickerSave', JSON.stringify(data));
-}
+  function initGame() {
+    stopTimer();
+    closeOverlay();
 
-function loadGame() {
-  const raw = localStorage.getItem('clickerSave');
-  if (!raw) return;
-  try {
-    const data = JSON.parse(raw);
-    score = data.score || 0;
-    totalScore = data.totalScore || 0;
-    totalClicks = data.totalClicks || 0;
-    perClick = data.perClick || 1;
-    perSec = data.perSec || 0;
-    if (data.upgrades) {
-      data.upgrades.forEach((count, i) => {
-        if (upgrades[i]) upgrades[i].owned = count;
-      });
-    }
-    if (data.achieved) {
-      achieved = new Set(data.achieved);
-    }
-  } catch(e) {}
-}
+    matchedPairs = 0; moves = 0; seconds = 0; gameStarted = false; flippedCards = []; lockBoard = false;
+    document.getElementById('moves').textContent = '0';
+    document.getElementById('pairs').textContent = '0';
+    document.getElementById('timer').textContent = '0:00';
 
-setInterval(saveGame, 10000);
+    const board = document.getElementById('board');
+    board.innerHTML = '';
 
-// ==================== СТАРТ ====================
-loadGame();
-updateUI();
-renderShop();
+    let deck = [];
+    emojis.forEach(e => { deck.push(e); deck.push(e); });
+    shuffle(deck);
+
+    deck.forEach((emoji, i) => board.appendChild(createCard(emoji, i)));
+  }
+
+  // Инициализация
+  renderLeaderboard();
+  initGame();
 </script>
 
 </body>
