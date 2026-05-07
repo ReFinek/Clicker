@@ -68,8 +68,8 @@
   .main {
     display: flex;
     gap: 30px;
-    padding: 30px;
-    max-width: 1200px;
+    padding: 30px 30px 30px 30px;
+    max-width: 1400px;
     margin: 0 auto;
   }
 
@@ -98,6 +98,8 @@
     transition: transform 0.1s, box-shadow 0.1s;
     position: relative;
     outline: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .click-btn::after {
@@ -154,13 +156,14 @@
 
   /* ===== МАГАЗИН ===== */
   .shop {
-    width: 380px;
+    width: 420px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 80vh;
+    max-height: 85vh;
     overflow-y: auto;
-    padding-right: 10px;
+    padding-right: 0;
+    margin-right: 0;
   }
 
   .shop::-webkit-scrollbar { width: 6px; }
@@ -217,7 +220,7 @@
     flex-shrink: 0;
   }
 
-  .upgrade-info { flex: 1; }
+  .upgrade-info { flex: 1; min-width: 0; }
 
   .upgrade-info .name {
     font-weight: 700;
@@ -345,130 +348,63 @@ let totalScore = 0;
 let totalClicks = 0;
 let perClick = 1;
 let perSec = 0;
+let isClicking = false;
 
-// ==================== УЛУЧШЕНИЯ ====================
+// ==================== УЛУЧШЕНИЯ (до триллионов) ====================
 const upgrades = [
-  {
-    id: 'cursor',
-    icon: '👆',
-    name: 'Усиленный курсор',
-    desc: '+1 к клику',
-    basePrice: 15,
-    priceMult: 1.5,
-    owned: 0,
-    type: 'click',
-    value: 1
-  },
-  {
-    id: 'auto1',
-    icon: '🤖',
-    name: 'Авто-кликер',
-    desc: '+1 очко/сек',
-    basePrice: 50,
-    priceMult: 1.4,
-    owned: 0,
-    type: 'auto',
-    value: 1
-  },
-  {
-    id: 'double',
-    icon: '✌️',
-    name: 'Двойной удар',
-    desc: '+3 к клику',
-    basePrice: 120,
-    priceMult: 1.55,
-    owned: 0,
-    type: 'click',
-    value: 3
-  },
-  {
-    id: 'auto2',
-    icon: '⚙️',
-    name: 'Фабрика кликов',
-    desc: '+5 очков/сек',
-    basePrice: 300,
-    priceMult: 1.5,
-    owned: 0,
-    type: 'auto',
-    value: 5
-  },
-  {
-    id: 'mega',
-    icon: '💎',
-    name: 'Мега-палец',
-    desc: '+10 к клику',
-    basePrice: 800,
-    priceMult: 1.6,
-    owned: 0,
-    type: 'click',
-    value: 10
-  },
-  {
-    id: 'auto3',
-    icon: '🏭',
-    name: 'Империя кликов',
-    desc: '+20 очков/сек',
-    basePrice: 2000,
-    priceMult: 1.55,
-    owned: 0,
-    type: 'auto',
-    value: 20
-  },
-  {
-    id: 'ultra',
-    icon: '🔮',
-    name: 'Квантовый тап',
-    desc: '+50 к клику',
-    basePrice: 5000,
-    priceMult: 1.65,
-    owned: 0,
-    type: 'click',
-    value: 50
-  },
-  {
-    id: 'auto4',
-    icon: '🚀',
-    name: 'Клик-ракета',
-    desc: '+100 очков/сек',
-    basePrice: 15000,
-    priceMult: 1.6,
-    owned: 0,
-    type: 'auto',
-    value: 100
-  },
-  {
-    id: 'cosmic',
-    icon: '🌌',
-    name: 'Космический палец',
-    desc: '+500 очков/сек',
-    basePrice: 100000,
-    priceMult: 1.7,
-    owned: 0,
-    type: 'auto',
-    value: 500
-  },
-  {
-    id: 'god',
-    icon: '👑',
-    name: 'Божественный клик',
-    desc: '+5000 к клику',
-    basePrice: 500000,
-    priceMult: 1.8,
-    owned: 0,
-    type: 'click',
-    value: 5000
-  }
+  { id: 'cursor', icon: '👆', name: 'Усиленный курсор', desc: '+1 к клику', basePrice: 15, priceMult: 1.5, owned: 0, type: 'click', value: 1 },
+  { id: 'auto1', icon: '🤖', name: 'Авто-кликер', desc: '+1 очко/сек', basePrice: 50, priceMult: 1.4, owned: 0, type: 'auto', value: 1 },
+  { id: 'double', icon: '✌️', name: 'Двойной удар', desc: '+3 к клику', basePrice: 120, priceMult: 1.55, owned: 0, type: 'click', value: 3 },
+  { id: 'auto2', icon: '⚙️', name: 'Фабрика кликов', desc: '+5 очков/сек', basePrice: 300, priceMult: 1.5, owned: 0, type: 'auto', value: 5 },
+  { id: 'mega', icon: '💎', name: 'Мега-палец', desc: '+10 к клику', basePrice: 800, priceMult: 1.6, owned: 0, type: 'click', value: 10 },
+  { id: 'auto3', icon: '🏭', name: 'Империя кликов', desc: '+20 очков/сек', basePrice: 2000, priceMult: 1.55, owned: 0, type: 'auto', value: 20 },
+  { id: 'ultra', icon: '🔮', name: 'Квантовый тап', desc: '+50 к клику', basePrice: 5000, priceMult: 1.65, owned: 0, type: 'click', value: 50 },
+  { id: 'auto4', icon: '🚀', name: 'Клик-ракета', desc: '+100 очков/сек', basePrice: 15000, priceMult: 1.6, owned: 0, type: 'auto', value: 100 },
+  { id: 'super', icon: '⭐', name: 'Супер-клик', desc: '+250 к клику', basePrice: 50000, priceMult: 1.65, owned: 0, type: 'click', value: 250 },
+  { id: 'auto5', icon: '🌟', name: 'Звёздная фабрика', desc: '+500 очков/сек', basePrice: 100000, priceMult: 1.65, owned: 0, type: 'auto', value: 500 },
+  { id: 'cosmic', icon: '🌌', name: 'Космический палец', desc: '+1,000 к клику', basePrice: 250000, priceMult: 1.7, owned: 0, type: 'click', value: 1000 },
+  { id: 'auto6', icon: '🛰️', name: 'Орбитальная станция', desc: '+2,500 очков/сек', basePrice: 750000, priceMult: 1.7, owned: 0, type: 'auto', value: 2500 },
+  { id: 'galaxy', icon: '🌠', name: 'Галактический клик', desc: '+5,000 к клику', basePrice: 2000000, priceMult: 1.75, owned: 0, type: 'click', value: 5000 },
+  { id: 'auto7', icon: '🌌', name: 'Галактика кликов', desc: '+10,000 очков/сек', basePrice: 5000000, priceMult: 1.75, owned: 0, type: 'auto', value: 10000 },
+  { id: 'universe', icon: '🌠', name: 'Вселенский тап', desc: '+25,000 к клику', basePrice: 15000000, priceMult: 1.8, owned: 0, type: 'click', value: 25000 },
+  { id: 'auto8', icon: '🌌', name: 'Вселенная кликов', desc: '+50,000 очков/сек', basePrice: 40000000, priceMult: 1.8, owned: 0, type: 'auto', value: 50000 },
+  { id: 'multiverse', icon: '✨', name: 'Мультивселенная', desc: '+100,000 к клику', basePrice: 120000000, priceMult: 1.85, owned: 0, type: 'click', value: 100000 },
+  { id: 'auto9', icon: '🌠', name: 'Космическая империя', desc: '+250,000 очков/сек', basePrice: 350000000, priceMult: 1.85, owned: 0, type: 'auto', value: 250000 },
+  { id: 'dimension', icon: '💫', name: 'Измерение кликов', desc: '+500,000 к клику', basePrice: 1000000000, priceMult: 1.9, owned: 0, type: 'click', value: 500000 },
+  { id: 'auto10', icon: '🌌', name: 'Квантовая реальность', desc: '+1M очков/сек', basePrice: 3000000000, priceMult: 1.9, owned: 0, type: 'auto', value: 1000000 },
+  { id: 'infinity', icon: '♾️', name: 'Бесконечный клик', desc: '+5M к клику', basePrice: 10000000000, priceMult: 1.95, owned: 0, type: 'click', value: 5000000 },
+  { id: 'auto11', icon: '🌟', name: 'Бесконечность+', desc: '+10M очков/сек', basePrice: 30000000000, priceMult: 1.95, owned: 0, type: 'auto', value: 10000000 },
+  { id: 'eternity', icon: '⏳', name: 'Вечность', desc: '+50M к клику', basePrice: 100000000000, priceMult: 2.0, owned: 0, type: 'click', value: 50000000 },
+  { id: 'auto12', icon: '💎', name: 'Алмазная эра', desc: '+100M очков/сек', basePrice: 300000000000, priceMult: 2.0, owned: 0, type: 'auto', value: 100000000 },
+  { id: 'omnipotent', icon: '👁️', name: 'Всемогущий клик', desc: '+500M к клику', basePrice: 1000000000000, priceMult: 2.1, owned: 0, type: 'click', value: 500000000 },
+  { id: 'auto13', icon: '🌌', name: 'Триллионная империя', desc: '+1B очков/сек', basePrice: 3000000000000, priceMult: 2.1, owned: 0, type: 'auto', value: 1000000000 },
 ];
 
-// ==================== ДОСТИЖЕНИЯ ====================
+// ==================== ДОСТИЖЕНИЯ (расширенные) ====================
 const achievements = [
   { score: 100, text: '🎉 100 очков! Новичок кликер' },
-  { score: 1000, text: '🔥 1,000 очков! Клик-мастер' },
-  { score: 10000, text: '⚡ 10K очков! Клик-маньяк' },
+  { score: 500, text: '🔥 500 очков! Первый успех' },
+  { score: 1000, text: '⚡ 1K очков! Клик-мастер' },
+  { score: 5000, text: '💪 5K очков! Продвинутый кликер' },
+  { score: 10000, text: ' 10K очков! Клик-маньяк' },
+  { score: 25000, text: '🌟 25K очков! Эксперт кликов' },
   { score: 50000, text: '💰 50K очков! Клик-магнат' },
-  { score: 100000, text: '🏆 100K очков! Клик-легенда' },
-  { score: 500000, text: '🌟 500K очков! Клик-божество' },
-  { score: 1000000, text: '👑 МИЛЛИОН! Абсолютный кликер!' },
+  { score: 100000, text: '👑 100K очков! Клик-легенда' },
+  { score: 250000, text: '💎 250K очков! Алмазный кликер' },
+  { score: 500000, text: '🌠 500K очков! Клик-божество' },
+  { score: 1000000, text: '🏅 1M очков! МИЛЛИОНЕР!' },
+  { score: 5000000, text: '⭐ 5M очков! Мульти-миллионер' },
+  { score: 10000000, text: '🌟 10M очков! Клик-олигарх' },
+  { score: 50000000, text: '💫 50M очков! Галактический магнат' },
+  { score: 100000000, text: '🌌 100M очков! Вселенский кликер' },
+  { score: 500000000, text: '✨ 500M очков! Космический властелин' },
+  { score: 1000000000, text: '👁️ 1B очков! МИЛЛИАРДЕР!' },
+  { score: 5000000000, text: '♾️ 5B очков! Почти бесконечность' },
+  { score: 10000000000, text: '🌠 10B очков! Десять миллиардов!' },
+  { score: 50000000000, text: '💎 50B очков! Клик-титан' },
+  { score: 100000000000, text: '🏆 100B очков! Сотня миллиардов!' },
+  { score: 500000000000, text: '⭐ 500B очков! Полтриллиона!' },
+  { score: 1000000000000, text: '👑 1T очков! ТРИЛЛИОНЕР! Легенда!' },
 ];
 let achieved = new Set();
 
@@ -483,8 +419,9 @@ const clickBtn = document.getElementById('clickBtn');
 
 // ==================== ФОРМАТИРОВАНИЕ ЧИСЕЛ ====================
 function formatNum(n) {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
   if (n >= 1e4) return (n / 1e3).toFixed(1) + 'K';
   return Math.floor(n).toLocaleString('ru');
 }
@@ -496,7 +433,6 @@ function getPrice(upg) {
 
 // ==================== РЕНДЕР МАГАЗИНА ====================
 function renderShop() {
-  // Оставляем заголовок
   const title = shopEl.querySelector('.shop-title');
   shopEl.innerHTML = '';
   shopEl.appendChild(title);
@@ -556,21 +492,43 @@ function updateUI() {
   totalScoreEl.textContent = formatNum(totalScore);
 }
 
-// ==================== КЛИК ====================
-clickBtn.addEventListener('click', (e) => {
+// ==================== ОБРАБОТКА КЛИКА (исправлено) ====================
+function handleClick(e) {
+  if (isClicking) return;
+  isClicking = true;
+  
   score += perClick;
   totalScore += perClick;
   totalClicks++;
 
+  // Получаем координаты клика или центра кнопки
+  const rect = clickBtn.getBoundingClientRect();
+  const x = e.clientX || (rect.left + rect.width / 2);
+  const y = e.clientY || (rect.top + rect.height / 2);
+
   // Всплывающий текст
-  spawnFloatText(e.clientX, e.clientY, '+' + formatNum(perClick));
+  spawnFloatText(x, y, '+' + formatNum(perClick));
 
   // Частицы
-  spawnParticles(e.clientX, e.clientY, 5);
+  spawnParticles(x, y, 5);
 
   updateUI();
   renderShop();
   checkAchievements();
+  
+  setTimeout(() => { isClicking = false; }, 50);
+}
+
+// Используем mousedown вместо click для надёжности
+clickBtn.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  handleClick(e);
+});
+
+clickBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  handleClick({ clientX: touch.clientX, clientY: touch.clientY });
 });
 
 // ==================== ВСПЛЫВАЮЩИЙ ТЕКСТ ====================
@@ -635,7 +593,6 @@ setInterval(() => {
   }
 }, 1000);
 
-// Обновление магазина каждые 2 секунды (для подсветки доступных)
 setInterval(() => {
   renderShop();
 }, 2000);
@@ -671,7 +628,6 @@ function loadGame() {
   } catch(e) {}
 }
 
-// Автосохранение каждые 10 секунд
 setInterval(saveGame, 10000);
 
 // ==================== СТАРТ ====================
