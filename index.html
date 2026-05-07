@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Кликер Империя</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  /* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
+  .top-bar {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .score-display {
+    text-align: center;
+  }
+
+  .score-display .label {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .score-display .value {
+    font-size: 42px;
+    font-weight: 900;
+    background: linear-gradient(90deg, #f9d423, #ff4e50);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+  }
+
+  .stats {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .stats span {
+    background: rgba(255,255,255,0.08);
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+
+  /* ===== ОСНОВНОЙ КОНТЕНТ ===== */
+  .main {
+    display: flex;
+    gap: 30px;
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ===== ЗОНА КЛИКА ===== */
+  .click-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+  }
+
+  .click-btn {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: radial-gradient(circle at 35% 35%, #ff6b6b, #c0392b);
+    box-shadow:
+      0 8px 30px rgba(231, 76, 60, 0.4),
+      0 0 60px rgba(231, 76, 60, 0.15),
+      inset 0 -4px 12px rgba(0,0,0,0.3),
+      inset 0 4px 12px rgba(255,255,255,0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+    position: relative;
+    outline: none;
+  }
+
+  .click-btn::after {
+    content: '⚡';
+    font-size: 70px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .click-btn:hover {
+    transform: scale(1.05);
+    box-shadow:
+      0 12px 40px rgba(231, 76, 60, 0.6),
+      0 0 80px rgba(231, 76, 60, 0.25),
+      inset 0 -4px 12px rgba(0,0,0,0.3),
+      inset 0 4px 12px rgba(255,255,255,0.2);
+  }
+
+  .click-btn:active {
+    transform: scale(0.93);
+    box-shadow:
+      0 4px 15px rgba(231, 76, 60, 0.3),
+      inset 0 -2px 8px rgba(0,0,0,0.3);
+  }
+
+  .click-info {
+    margin-top: 25px;
+    font-size: 18px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .click-info strong {
+    color: #f9d423;
+  }
+
+  /* ===== Всплывающие числа ===== */
+  .float-text {
+    position: fixed;
+    pointer-events: none;
+    font-weight: 900;
+    font-size: 28px;
+    color: #f9d423;
+    text-shadow: 0 0 10px rgba(249,212,35,0.5);
+    animation: floatUp 1s ease-out forwards;
+    z-index: 999;
+  }
+
+  @keyframes floatUp {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+  }
+
+  /* ===== МАГАЗИН ===== */
+  .shop {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding-right: 10px;
+  }
+
+  .shop::-webkit-scrollbar { width: 6px; }
+  .shop::-webkit-scrollbar-track { background: transparent; }
+  .shop::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+  .shop-title {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .upgrade-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.2s;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .upgrade-card:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+    transform: translateX(-4px);
+  }
+
+  .upgrade-card.cant-afford {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .upgrade-card.cant-afford:hover {
+    transform: none;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .upgrade-icon {
+    font-size: 36px;
+    width: 55px;
+    height: 55px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .upgrade-info { flex: 1; }
+
+  .upgrade-info .name {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+
+  .upgrade-info .desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+  }
+
+  .upgrade-info .owned {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 3px;
+  }
+
+  .upgrade-price {
+    background: linear-gradient(135deg, #f9d423, #f5a623);
+    color: #1a1a2e;
+    font-weight: 900;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 25px;
+    white-space: nowrap;
+  }
+
+  /* ===== ДОСТИЖЕНИЯ ===== */
+  .achievement-popup {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    padding: 14px 28px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: 0 10px 40px rgba(102,126,234,0.4);
+    animation: slideIn 0.5s ease forwards, slideOut 0.5s ease 2.5s forwards;
+    z-index: 1000;
+    white-space: nowrap;
+  }
+
+  @keyframes slideIn {
+    to { transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes slideOut {
+    to { transform: translateX(-50%) translateY(100px); opacity: 0; }
+  }
+
+  /* ===== ЧАСТИЦЫ ===== */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    animation: particleFade 0.8s ease-out forwards;
+    z-index: 998;
+  }
+
+  @keyframes particleFade {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0); }
+  }
+
+  /* ===== АДАПТИВ ===== */
+  @media (max-width: 768px) {
+    .main {
+      flex-direction: column;
+      padding: 15px;
+    }
+    .shop {
+      width: 100%;
+      max-height: none;
+    }
+    .click-btn {
+      width: 160px;
+      height: 160px;
+    }
+    .score-display .value {
+      font-size: 30px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+<div class="top-bar">
+  <div class="stats">
+    <span>⚡ За клик: <strong id="perClick">1</strong></span>
+    <span>🔄 В секунду: <strong id="perSec">0</strong></span>
+  </div>
+  <div class="score-display">
+    <div class="label">Очки</div>
+    <div class="value" id="score">0</div>
+  </div>
+  <div class="stats">
+    <span>🖱 Всего кликов: <strong id="totalClicks">0</strong></span>
+    <span>🏆 Всего очков: <strong id="totalScore">0</strong></span>
+  </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="main">
+
+  <!-- ЗОНА КЛИКА -->
+  <div class="click-zone">
+    <button class="click-btn" id="clickBtn"></button>
+    <div class="click-info">Кликай по кнопке, чтобы зарабатывать <strong>очки</strong>!</div>
+  </div>
+
+  <!-- МАГАЗИН -->
+  <div class="shop" id="shop">
+    <div class="shop-title">🛒 Магазин улучшений</div>
+  </div>
+
+</div>
+
+<script>
+// ==================== ИГРОВЫЕ ДАННЫЕ ====================
+let score = 0;
+let totalScore = 0;
+let totalClicks = 0;
+let perClick = 1;
+let perSec = 0;
+
+// ==================== УЛУЧШЕНИЯ ====================
+const upgrades = [
+  {
+    id: 'cursor',
+    icon: '👆',
+    name: 'Усиленный курсор',
+    desc: '+1 к клику',
+    basePrice: 15,
+    priceMult: 1.5,
+    owned: 0,
+    type: 'click',
+    value: 1
+  },
+  {
+    id: 'auto1',
+    icon: '🤖',
+    name: 'Авто-кликер',
+    desc: '+1 очко/сек',
+    basePrice: 50,
+    priceMult: 1.4,
+    owned: 0,
+    type: 'auto',
+    value: 1
+  },
+  {
+    id: 'double',
+    icon: '✌️',
+    name: 'Двойной удар',
+    desc: '+3 к клику',
+    basePrice: 120,
+    priceMult: 1.55,
+    owned: 0,
+    type: 'click',
+    value: 3
+  },
+  {
+    id: 'auto2',
+    icon: '⚙️',
+    name: 'Фабрика кликов',
+    desc: '+5 очков/сек',
+    basePrice: 300,
+    priceMult: 1.5,
+    owned: 0,
+    type: 'auto',
+    value: 5
+  },
+  {
+    id: 'mega',
+    icon: '💎',
+    name: 'Мега-палец',
+    desc: '+10 к клику',
+    basePrice: 800,
+    priceMult: 1.6,
+    owned: 0,
+    type: 'click',
+    value: 10
+  },
+  {
+    id: 'auto3',
+    icon: '🏭',
+    name: 'Империя кликов',
+    desc: '+20 очков/сек',
+    basePrice: 2000,
+    priceMult: 1.55,
+    owned: 0,
+    type: 'auto',
+    value: 20
+  },
+  {
+    id: 'ultra',
+    icon: '🔮',
+    name: 'Квантовый тап',
+    desc: '+50 к клику',
+    basePrice: 5000,
+    priceMult: 1.65,
+    owned: 0,
+    type: 'click',
+    value: 50
+  },
+  {
+    id: 'auto4',
+    icon: '🚀',
+    name: 'Клик-ракета',
+    desc: '+100 очков/сек',
+    basePrice: 15000,
+    priceMult: 1.6,
+    owned: 0,
+    type: 'auto',
+    value: 100
+  },
+  {
+    id: 'cosmic',
+    icon: '🌌',
+    name: 'Космический палец',
+    desc: '+500 очков/сек',
+    basePrice: 100000,
+    priceMult: 1.7,
+    owned: 0,
+    type: 'auto',
+    value: 500
+  },
+  {
+    id: 'god',
+    icon: '👑',
+    name: 'Божественный клик',
+    desc: '+5000 к клику',
+    basePrice: 500000,
+    priceMult: 1.8,
+    owned: 0,
+    type: 'click',
+    value: 5000
+  }
+];
+
+// ==================== ДОСТИЖЕНИЯ ====================
+const achievements = [
+  { score: 100, text: '🎉 100 очков! Новичок кликер' },
+  { score: 1000, text: '🔥 1,000 очков! Клик-мастер' },
+  { score: 10000, text: '⚡ 10K очков! Клик-маньяк' },
+  { score: 50000, text: '💰 50K очков! Клик-магнат' },
+  { score: 100000, text: '🏆 100K очков! Клик-легенда' },
+  { score: 500000, text: '🌟 500K очков! Клик-божество' },
+  { score: 1000000, text: '👑 МИЛЛИОН! Абсолютный кликер!' },
+];
+let achieved = new Set();
+
+// ==================== DOM ЭЛЕМЕНТЫ ====================
+const scoreEl = document.getElementById('score');
+const perClickEl = document.getElementById('perClick');
+const perSecEl = document.getElementById('perSec');
+const totalClicksEl = document.getElementById('totalClicks');
+const totalScoreEl = document.getElementById('totalScore');
+const shopEl = document.getElementById('shop');
+const clickBtn = document.getElementById('clickBtn');
+
+// ==================== ФОРМАТИРОВАНИЕ ЧИСЕЛ ====================
+function formatNum(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e4) return (n / 1e3).toFixed(1) + 'K';
+  return Math.floor(n).toLocaleString('ru');
+}
+
+// ==================== ЦЕНА УЛУЧШЕНИЯ ====================
+function getPrice(upg) {
+  return Math.floor(upg.basePrice * Math.pow(upg.priceMult, upg.owned));
+}
+
+// ==================== РЕНДЕР МАГАЗИНА ====================
+function renderShop() {
+  // Оставляем заголовок
+  const title = shopEl.querySelector('.shop-title');
+  shopEl.innerHTML = '';
+  shopEl.appendChild(title);
+
+  upgrades.forEach((upg, i) => {
+    const price = getPrice(upg);
+    const canAfford = score >= price;
+
+    const card = document.createElement('div');
+    card.className = 'upgrade-card' + (canAfford ? '' : ' cant-afford');
+    card.innerHTML = `
+      <div class="upgrade-icon">${upg.icon}</div>
+      <div class="upgrade-info">
+        <div class="name">${upg.name}</div>
+        <div class="desc">${upg.desc}</div>
+        <div class="owned">Куплено: ${upg.owned}</div>
+      </div>
+      <div class="upgrade-price">💰 ${formatNum(price)}</div>
+    `;
+
+    if (canAfford) {
+      card.addEventListener('click', () => buyUpgrade(i));
+    }
+
+    shopEl.appendChild(card);
+  });
+}
+
+// ==================== ПОКУПКА УЛУЧШЕНИЯ ====================
+function buyUpgrade(index) {
+  const upg = upgrades[index];
+  const price = getPrice(upg);
+
+  if (score < price) return;
+
+  score -= price;
+  upg.owned++;
+
+  if (upg.type === 'click') {
+    perClick += upg.value;
+  } else {
+    perSec += upg.value;
+  }
+
+  updateUI();
+  renderShop();
+  checkAchievements();
+  saveGame();
+}
+
+// ==================== ОБНОВЛЕНИЕ UI ====================
+function updateUI() {
+  scoreEl.textContent = formatNum(score);
+  perClickEl.textContent = formatNum(perClick);
+  perSecEl.textContent = formatNum(perSec);
+  totalClicksEl.textContent = formatNum(totalClicks);
+  totalScoreEl.textContent = formatNum(totalScore);
+}
+
+// ==================== КЛИК ====================
+clickBtn.addEventListener('click', (e) => {
+  score += perClick;
+  totalScore += perClick;
+  totalClicks++;
+
+  // Всплывающий текст
+  spawnFloatText(e.clientX, e.clientY, '+' + formatNum(perClick));
+
+  // Частицы
+  spawnParticles(e.clientX, e.clientY, 5);
+
+  updateUI();
+  renderShop();
+  checkAchievements();
+});
+
+// ==================== ВСПЛЫВАЮЩИЙ ТЕКСТ ====================
+function spawnFloatText(x, y, text) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = text;
+  el.style.left = (x - 30) + 'px';
+  el.style.top = (y - 20) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+// ==================== ЧАСТИЦЫ ====================
+function spawnParticles(x, y, count) {
+  const colors = ['#f9d423', '#ff4e50', '#764ba2', '#667eea', '#00d2ff'];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 8 + 4;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const offsetX = (Math.random() - 0.5) * 100;
+    const offsetY = (Math.random() - 0.5) * 100;
+
+    p.style.cssText = `
+      width: ${size}px; height: ${size}px;
+      background: ${color};
+      left: ${x + offsetX}px;
+      top: ${y + offsetY}px;
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 800);
+  }
+}
+
+// ==================== ДОСТИЖЕНИЯ ====================
+function checkAchievements() {
+  achievements.forEach(a => {
+    if (totalScore >= a.score && !achieved.has(a.score)) {
+      achieved.add(a.score);
+      showAchievement(a.text);
+    }
+  });
+}
+
+function showAchievement(text) {
+  const popup = document.createElement('div');
+  popup.className = 'achievement-popup';
+  popup.textContent = text;
+  document.body.appendChild(popup);
+  setTimeout(() => popup.remove(), 3200);
+}
+
+// ==================== АВТО-КЛИК ====================
+setInterval(() => {
+  if (perSec > 0) {
+    score += perSec;
+    totalScore += perSec;
+    updateUI();
+    renderShop();
+    checkAchievements();
+  }
+}, 1000);
+
+// Обновление магазина каждые 2 секунды (для подсветки доступных)
+setInterval(() => {
+  renderShop();
+}, 2000);
+
+// ==================== СОХРАНЕНИЕ ====================
+function saveGame() {
+  const data = {
+    score, totalScore, totalClicks, perClick, perSec,
+    upgrades: upgrades.map(u => u.owned),
+    achieved: [...achieved]
+  };
+  localStorage.setItem('clickerSave', JSON.stringify(data));
+}
+
+function loadGame() {
+  const raw = localStorage.getItem('clickerSave');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    score = data.score || 0;
+    totalScore = data.totalScore || 0;
+    totalClicks = data.totalClicks || 0;
+    perClick = data.perClick || 1;
+    perSec = data.perSec || 0;
+    if (data.upgrades) {
+      data.upgrades.forEach((count, i) => {
+        if (upgrades[i]) upgrades[i].owned = count;
+      });
+    }
+    if (data.achieved) {
+      achieved = new Set(data.achieved);
+    }
+  } catch(e) {}
+}
+
+// Автосохранение каждые 10 секунд
+setInterval(saveGame, 10000);
+
+// ==================== СТАРТ ====================
+loadGame();
+updateUI();
+renderShop();
+</script>
+
+</body>
+</html>
